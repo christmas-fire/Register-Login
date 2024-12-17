@@ -1,0 +1,6 @@
+user:     postgres
+password: 290605
+database: register-login
+host:     localhost
+port:     5432
+sslmode:  disable
