@@ -46,6 +46,20 @@ func AddUser(db *sql.DB, username, email, password string) error {
 	return nil
 }
 
+func DeleteUser(db *sql.DB, username string) error {
+	query := `
+		DELETE FROM users
+		WHERE username = $1
+	`
+
+	_, err := db.Exec(query, username)
+	if err != nil {
+		return fmt.Errorf("can't delete user '%s': %v", username, err)
+	}
+
+	return nil
+}
+
 func ValidateUser(db *sql.DB, username, password string) error {
 	var hashedPassword string
 
@@ -63,6 +77,46 @@ func ValidateUser(db *sql.DB, username, password string) error {
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
 		return fmt.Errorf("invalid password")
+	}
+
+	return nil
+}
+
+func UpdateUserPassword(db *sql.DB, username, newPassword string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("error hashing password: %v", err)
+	}
+
+	// SQL-запрос на обновление
+	query := `
+		UPDATE users
+		SET password = $2
+		WHERE username = $1
+	`
+
+	// Выполнение запроса
+	_, err = db.Exec(query, username, string(hashedPassword))
+	if err != nil {
+		return fmt.Errorf("can't update user's '%s' password: %v", username, err)
+	}
+
+	return nil
+}
+
+// UpdateUserUsername обновляет имя пользователя
+func UpdateUserUsername(db *sql.DB, currentUsername, newUsername string) error {
+	// SQL-запрос на обновление
+	query := `
+		UPDATE users
+		SET username = $2
+		WHERE username = $1
+	`
+
+	// Выполнение запроса
+	_, err := db.Exec(query, currentUsername, newUsername)
+	if err != nil {
+		return fmt.Errorf("can't update username from '%s' to '%s': %v", currentUsername, newUsername, err)
 	}
 
 	return nil
