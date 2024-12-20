@@ -1,18 +1,29 @@
-package users
+package postgres
 
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
+	"github.com/christmas-fire/register-login/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+// Проверяем входные данные от пользователя
+func ValidateUserData(username, email, password string) error {
+	if len(username) < 3 {
+		return fmt.Errorf("username must have at least 3 characters")
+	}
+	if len(password) < 8 {
+		return fmt.Errorf("password must have at least 8 characters")
+	}
+	if !strings.Contains(email, "@") {
+		return fmt.Errorf("invalid email format")
+	}
+	return nil
 }
 
+// Регистрация
 func AddUser(db *sql.DB, username, email, password string) error {
 	checkQuery := `
 		SELECT EXISTS (
@@ -29,7 +40,7 @@ func AddUser(db *sql.DB, username, email, password string) error {
 	}
 
 	if alreadyExists {
-		return fmt.Errorf("error checking existing user: %w", err)
+		return fmt.Errorf("error user already exists: %w", err)
 	}
 
 	insertQuery := `
@@ -46,20 +57,7 @@ func AddUser(db *sql.DB, username, email, password string) error {
 	return nil
 }
 
-func DeleteUser(db *sql.DB, username string) error {
-	query := `
-		DELETE FROM users
-		WHERE username = $1
-	`
-
-	_, err := db.Exec(query, username)
-	if err != nil {
-		return fmt.Errorf("can't delete user '%s': %v", username, err)
-	}
-
-	return nil
-}
-
+// Авторизация
 func ValidateUser(db *sql.DB, username, password string) error {
 	var hashedPassword string
 
@@ -82,47 +80,23 @@ func ValidateUser(db *sql.DB, username, password string) error {
 	return nil
 }
 
-func UpdateUserPassword(db *sql.DB, username, newPassword string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("error hashing password: %v", err)
-	}
-
-	// SQL-запрос на обновление
+// Удаление пользователя
+func DeleteUser(db *sql.DB, username string) error {
 	query := `
-		UPDATE users
-		SET password = $2
+		DELETE FROM users
 		WHERE username = $1
 	`
 
-	// Выполнение запроса
-	_, err = db.Exec(query, username, string(hashedPassword))
+	_, err := db.Exec(query, username)
 	if err != nil {
-		return fmt.Errorf("can't update user's '%s' password: %v", username, err)
+		return fmt.Errorf("can't delete user '%s': %v", username, err)
 	}
 
 	return nil
 }
 
-// UpdateUserUsername обновляет имя пользователя
-func UpdateUserUsername(db *sql.DB, currentUsername, newUsername string) error {
-	// SQL-запрос на обновление
-	query := `
-		UPDATE users
-		SET username = $2
-		WHERE username = $1
-	`
-
-	// Выполнение запроса
-	_, err := db.Exec(query, currentUsername, newUsername)
-	if err != nil {
-		return fmt.Errorf("can't update username from '%s' to '%s': %v", currentUsername, newUsername, err)
-	}
-
-	return nil
-}
-
-func GetAllUsers(db *sql.DB) ([]User, error) {
+// Получить всех пользователей
+func GetAllUsers(db *sql.DB) ([]models.User, error) {
 	query := `
 		SELECT username, email, password FROM users
 	`
@@ -132,10 +106,10 @@ func GetAllUsers(db *sql.DB) ([]User, error) {
 	}
 	defer rows.Close()
 
-	var users []User
+	var users []models.User
 
 	for rows.Next() {
-		var u User
+		var u models.User
 		err := rows.Scan(&u.Username, &u.Email, &u.Password)
 		if err != nil {
 			return nil, err

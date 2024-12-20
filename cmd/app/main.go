@@ -41,22 +41,6 @@ func main() {
 		rest.DeleteUserHandler(db)(w, r)
 	})
 
-	http.HandleFunc("/update-password", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		rest.UpdateUserPasswordHandler(db)(w, r)
-	})
-
-	http.HandleFunc("/update-username", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		rest.UpdateUserUsernameHandler(db)(w, r)
-	})
-
 	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
