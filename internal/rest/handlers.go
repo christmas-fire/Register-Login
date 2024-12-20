@@ -60,7 +60,7 @@ func ValidateUserHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		log.Printf("user: '%s' has validated", u.Username)
+		log.Printf("user: '%s' has logined", u.Username)
 	}
 }
 

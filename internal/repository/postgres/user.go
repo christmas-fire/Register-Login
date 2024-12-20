@@ -23,57 +23,60 @@ func ValidateUserData(username, email, password string) error {
 	return nil
 }
 
-// Регистрация
+// Регистрация нового пользователя в базе данных
 func AddUser(db *sql.DB, username, email, password string) error {
-	checkQuery := `
-		SELECT EXISTS (
-			SELECT 1
-			FROM USERS
-			WHERE username = $1 OR email = $2
-		)
-	`
+	if err := ValidateUserData(username, email, password); err != nil {
+		return fmt.Errorf("invalid user data: %w", err)
+	}
 
+	checkQuery := `
+        SELECT EXISTS (
+            SELECT 1
+            FROM users
+            WHERE username = $1 OR email = $2
+        )
+    `
 	var alreadyExists bool
-	err := db.QueryRow(checkQuery, username, email).Scan(&alreadyExists)
-	if err != nil {
-		return fmt.Errorf("error checking existing user: %w", err)
+	if err := db.QueryRow(checkQuery, username, email).Scan(&alreadyExists); err != nil {
+		return fmt.Errorf("error checking if user exists: %w", err)
 	}
 
 	if alreadyExists {
-		return fmt.Errorf("error user already exists: %w", err)
+		return fmt.Errorf("user with the same username or email already exists")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("error hashing password: %w", err)
 	}
 
 	insertQuery := `
-	INSERT INTO users (username, email, password)
-	VALUES ($1, $2, $3)
-	`
-
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	_, err = db.Exec(insertQuery, username, email, hashedPassword)
-	if err != nil {
-		return fmt.Errorf("error insert new user: %w", err)
+        INSERT INTO users (username, email, password)
+        VALUES ($1, $2, $3)
+    `
+	if _, err := db.Exec(insertQuery, username, email, hashedPassword); err != nil {
+		return fmt.Errorf("error inserting new user into the database: %w", err)
 	}
 
 	return nil
 }
 
-// Авторизация
+// Авторизация пользователя
 func ValidateUser(db *sql.DB, username, password string) error {
 	var hashedPassword string
 
 	query := `
-		SELECT password FROM users WHERE username = $1
-	`
+        SELECT password FROM users WHERE username = $1
+    `
 	err := db.QueryRow(query, username).Scan(&hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("user not found")
 		}
-		return fmt.Errorf("error validate user: %w", err)
+		return fmt.Errorf("error retrieving user from the database: %w", err)
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	if err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
 		return fmt.Errorf("invalid password")
 	}
 
