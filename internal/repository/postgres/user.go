@@ -127,3 +127,16 @@ func GetAllUsers(db *sql.DB) ([]models.User, error) {
 
 	return users, nil
 }
+
+func AddJwt(db *sql.DB, username, stringToken string) error {
+	query := `
+        UPDATE users
+        SET jwt = $2
+        WHERE username = $1
+    `
+	if _, err := db.Exec(query, username, stringToken); err != nil {
+		return fmt.Errorf("error updating jwt in the database: %w", err)
+	}
+
+	return nil
+}

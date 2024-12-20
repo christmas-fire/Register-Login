@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/christmas-fire/register-login/internal/database"
+	"github.com/christmas-fire/register-login/internal/middleware"
 	"github.com/christmas-fire/register-login/internal/rest"
 )
 
@@ -33,21 +34,23 @@ func main() {
 		rest.ValidateUserHandler(db)(w, r)
 	})
 
-	http.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
+	// Удаление пользователя (требуется авторизация)
+	http.Handle("/delete", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		rest.DeleteUserHandler(db)(w, r)
-	})
+	})))
 
-	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+	// Получение всех пользователей (требуется авторизация)
+	http.Handle("/users", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		rest.GetAllTasksHandler(db)(w, r)
-	})
+	})))
 
 	log.Println("server is running on http://localhost:8080")
 	err = http.ListenAndServe(":8080", nil)

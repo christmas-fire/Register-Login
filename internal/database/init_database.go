@@ -39,7 +39,8 @@ func CreateTable(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS users (
 			username TEXT NOT NULL UNIQUE,
 			email TEXT NOT NULL UNIQUE,
-			password TEXT NOT NULL
+			password TEXT NOT NULL,
+			jwt TEXT
 		)`
 
 	_, err := db.Exec(query)
